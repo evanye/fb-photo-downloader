@@ -1,0 +1,55 @@
+<html>
+<head>
+    <title>FB Photo Dwnldr</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="lib/chosen/chosen.css">
+</head>
+<body>
+    <div id="fb-root"></div>
+    <div class="container">
+        <div class="title">
+            <h1>Facebook Photo Downloader</h1>
+            <p>Download yours and your friends' tagged photos</p>
+        </div>
+        <!-- <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button> -->
+        <img id="login" src="http://hayageek.com/examples/oauth/facebook/oauth-javascript/LoginWithFacebook.png" style="cursor:pointer;"/>
+
+        <div id="content" style="display:none">
+            <div class="row">
+                <div class="col-sm-4">
+                    <select id="friend_list" class="chosen-select" data-placeholder="Select a Friend">
+                        <option></option>
+                    </select>
+                </div>
+                <div class="col-sm-4">
+                    <button id="get_pictures" class="btn btn-default btn-med btn-primary">Get Pictures</button>
+                </div>
+                <div class="col-sm-4">
+                    <a href="#" id="blob">Download Images</a>
+                </div>
+            </div>
+            <div class="row">
+                <table id="pictures">
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function(d){ // Load the SDK asynchronously
+            var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
+            if (d.getElementById(id)) {return;}
+            js = d.createElement('script'); js.id = id; js.async = true;
+            js.src = "//connect.facebook.net/en_US/all.js";
+            ref.parentNode.insertBefore(js, ref);
+        }(document));
+    </script>
+    <script src="js/jquery-2.0.3.js"></script>
+    <script src="js/main.js"></script>
+    <script src="lib/chosen/chosen.jquery.js"></script>
+    <script src="lib/jszip/jszip.js"></script>
+</body>
+</html>

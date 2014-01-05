@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>JSZip example : download the generated zip file</title>
+
+<link media="screen" href="style.css" type="text/css" rel="stylesheet">
+
+<script type="text/javascript" src="../jszip.js"></script>
+<script type="text/javascript">
+window.onload = function () {
+  var zip = new JSZip();
+
+  function read(cb){
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', './kitten.jpg', true);
+    xhr.responseType = 'blob';
+    xhr.onload = function(e) {
+      if(this.status == 200){
+        var blob = new Blob([this.response], {type: "image/png"});
+        reader = new FileReader();
+        reader.onload = function (event){
+          if(event.loaded == event.total)
+            cb(event.target.result);
+        }
+        reader.readAsBinaryString(blob);
+      }
+    }
+    xhr.send(null);
+  }
+
+  read(function(data){
+    console.log(data);
+    f = zip.folder('inhere')
+    f.file('kitten.jpg', data, {binary:true})
+    
+    // Blob
+    var blobLink = document.getElementById('blob');
+    try {
+      blobLink.download = "kitten.zip";
+      blobLink.href = window.URL.createObjectURL(zip.generate({type:"blob"}));
+    } catch(e) {
+      blobLink.innerHTML += " (not supported on this browser)";
+    }
+  });
+
+};
+</script>
+</head>
+<body>
+<h1><a href="../">JSZip</a> example : download the generated zip file</h1>
+<h2>The Blob URL</h2>
+<div>
+  <a href="#" id="blob">click to download</a>
+</div>
+</body>
+</html>
