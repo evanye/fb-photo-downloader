@@ -13,7 +13,6 @@ window.fbAsyncInit = function() {
     FB.Event.subscribe('auth.authResponseChange', function(response) {
         if (response.status === 'connected') {
             console.log("connected");
-            addFriend(response.authResponse.userID, "me");
             startUI();
         } else /* if (response.status === 'not_authorized') */ {
             console.log("authorization failed");
@@ -29,27 +28,26 @@ function login() {
 }
 
 function startUI() {
+    $('#login').hide();
     getFriends();
 }
 
 function getFriends() {
     console.log("getting friends");
-    $('#login').hide();
+    var options = $('#friend_list').get(0).options;
+
+    FB.api('/me', function(response) {
+        options.add(new Option(response.name + ' ( Me )', response.id), 0);
+    });
+
     FB.api('/me/friends', function(response) {
         $.each(response.data, function(index, friend) {
-            addFriend(friend.id, friend.name);
+            options.add(new Option(friend.name, friend.id));
         });
 
         $('#content').show();
         $('#friend_list').chosen();
     });
-}
-
-function addFriend(id, name) {
-    $('#friend_list')
-        .append($("<option>")
-        .attr("value", id)
-        .text(name));
 }
 
 $('button#get_pictures').click(function(){
