@@ -1,5 +1,7 @@
 $('#login').click(function(){
-    login();
+    FB.login(function(response){
+        console.log("logged in");
+    }, {scope: 'user_friends, user_photos, friends_photos'});
 });
 
 window.fbAsyncInit = function() {
@@ -19,22 +21,51 @@ window.fbAsyncInit = function() {
         }
 
     });
+
+    $('button#login').removeClass('disabled');
 };
 
-function login() {
-    FB.login(function(response){
-        console.log("logged in");
-    }, {scope: 'user_friends, user_photos, friends_photos'});
+function logout() {
+    FB.logout(function(response) {
+        console.log('logout');
+    });
 }
 
+var start_date = moment().subtract('days', 29);
+var end_date = moment();
+
 function startUI() {
-    $('#login').hide();
     getFriends();
+    $('div.login-box').hide();
+    $('.container').show();
+
+    $('#reportrange').daterangepicker(
+        {
+          ranges: {
+             'Today': [moment(), moment()],
+             'Yesterday': [moment().subtract('days', 1), moment().subtract('days', 1)],
+             'Last 7 Days': [moment().subtract('days', 6), moment()],
+             'Last 30 Days': [moment().subtract('days', 29), moment()],
+             'This Month': [moment().startOf('month'), moment().endOf('month')],
+             'All Time': [moment(0), moment()]
+          },
+          startDate: moment().subtract('days', 29),
+          endDate: moment()
+        },
+        function(start, end) {
+            start_date = (start.unix() < 0) ? moment(0) : start;
+            end_date = end;
+            $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
+        }
+    );
+    $('#reportrange span').html(moment().subtract('days', 29).format('MMMM D, YYYY') + ' - ' + moment().format('MMMM D, YYYY'));
 }
 
 function getFriends() {
     console.log("getting friends");
     var options = $('#friend_list').get(0).options;
+    options.length = 0;
+    options.add(new Option());
 
     FB.api('/me', function(response) {
         options.add(new Option(response.name + ' ( Me )', response.id), 0);
@@ -44,57 +75,63 @@ function getFriends() {
         $.each(response.data, function(index, friend) {
             options.add(new Option(friend.name, friend.id));
         });
-
-        $('#content').show();
+        
         $('#friend_list').chosen();
+        $('button#get_pictures').removeClass('disabled');
     });
 }
 
 $('button#get_pictures').click(function(){
     var friendID = $('#friend_list').val();
     if(friendID) {
-        getPhotos(friendID);
+        getPhotos(friendID, start_date, end_date);
     }
 });
 
-function getPhotos(userID) {
+function getPhotos(userID, start, end) {
     var num_photos = 0;
     var num_downloaded_photos = 0;
-    var max_photos = 16;
+    var still_looking = true;
+    var max_photos = 100;
     var unique_names = {};
     var zip = new JSZip();
 
-    FB.api('/' + userID + '/photos', function(response) {
+    FB.api('/' + userID + '/photos?since=' + start.unix() + '&until=' + end.unix(), function(response) {
         traverse(response);
         console.log(response);
     });
 
     function traverse(obj) {
         if(obj.data.length) {
-            $.get(obj.paging.next, function(data){
-                traverse(data);
+            $.each(obj.data, function(index, data) {
+                if(num_photos >= max_photos || moment(data.created_time) < start){
+                    still_looking = false;
+                    return;
+                }
+                addPicture(data.picture);
+                downloadImage(data.images[0].source, data.created_time);
+                num_photos++;
             });
 
-            $.each(obj.data, function(index, data) {
-                if(num_photos < max_photos) {
-                    addPicture(data.picture);
-                    downloadImage(data.images[0].source, data.created_time);
-                    num_photos++;
-                }
-            });
-        } else {
-            // no data
+            if(still_looking) {
+                $.get(obj.paging.next, function(data){
+                    traverse(data);
+                });
+            }
         }
     }
 
     function addPicture(url) {
-            if(num_photos % 4 === 0) {
-                $('#pictures tbody:last')
-                    .append($('<tr>'));
-            }
-            $('#pictures tr:last')
-                .append($('<td>')
-                    .append($('<img>', {'src': url})));
+        if(num_photos % 4 === 0) {
+            $('#pictures tbody:last')
+                .append($('<tr>'));
+        }
+        var div = "<div class='photo' " + 
+                  "style='background-image: url(" + url + ");'" +
+                  "></div>";
+        $('#pictures tr:last')
+            .append($('<td>')
+                .append($(div)));
     }
 
     function downloadImage(url, time) {
@@ -118,12 +155,20 @@ function getPhotos(userID) {
         var blobLink = document.getElementById('blob');
         console.log('finished downloading images!');
         try {
-            blobLink.download = "images.zip";
+            blobLink.download = getSelectedName() + ".zip";
             blobLink.href = window.URL.createObjectURL(zip.generate({type:"blob"}));
         } catch(e) {
             blobLink.innerHTML += " (not supported on this browser)";
         }
     }
+}
+
+function getSelectedName(){
+    var name = $('#friend_list option:selected').text();
+    if(s.indexOf('(') !== -1) {
+        return name.slice(0, s.indexOf('(') - 1);
+    }
+    return name;
 }
 
 function getImageData(url, callback){
@@ -145,12 +190,13 @@ function getImageData(url, callback){
 }
 
 function getDateString(time_string) {
-    var date = new Date(time_string);
-    var day = date.getDate();
-    var month = date.getMonth() + 1;
-    var year = date.getFullYear();
-    var hour = date.getHours();
-    var minutes = date.getMinutes();
-    var seconds = date.getSeconds();
-    return [year, month, day].join('-') + " " + [hour, minutes, seconds].join('.');
+    // var date = new Date(time_string);
+    // var day = date.getDate();
+    // var month = date.getMonth() + 1;
+    // var year = date.getFullYear();
+    // var hour = date.getHours();
+    // var minutes = date.getMinutes();
+    // var seconds = date.getSeconds();
+    // return [year, month, day].join('-') + " " + [hour, minutes, seconds].join('.');
+    return moment(time_string).format('YYYY-MM-DD HH.mm.ss')
 }

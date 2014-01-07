@@ -1,35 +1,43 @@
 <html>
 <head>
     <title>FB Photo Dwnldr</title>
-    <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/daterangepicker.css">
     <link rel="stylesheet" href="lib/chosen/chosen.css">
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
     <div id="fb-root"></div>
-    <div class="container">
-        <div class="title">
-            <h1>Facebook Photo Downloader</h1>
-            <p>Download yours and your friends' tagged photos</p>
-        </div>
-        <!-- <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button> -->
-        <img id="login" src="http://hayageek.com/examples/oauth/facebook/oauth-javascript/LoginWithFacebook.png" style="cursor:pointer;"/>
 
-        <div id="content" style="display:none">
-            <div class="row">
-                <div class="col-sm-4">
+    <div class="login-box">
+        <h1>Facebook Photo Downloader</h1>
+        <p>Download yours and your friends' tagged photos</p>
+        <button id="login" class="btn btn-primary disabled">Log In</button>
+    </div>
+
+    <div class="container">
+        <h1>Facebook Photo Downloader</h1>
+        <div class="row">
+            <div class="panel"><div class="panel-body">
+                <div class="col-sm-3">
                     <select id="friend_list" class="chosen-select" data-placeholder="Select a Friend">
                         <option></option>
                     </select>
                 </div>
-                <div class="col-sm-4">
-                    <button id="get_pictures" class="btn btn-default btn-med btn-primary">Get Pictures</button>
+                <div class="col-sm-6">
+                    <div id="reportrange" class="pull-right" style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc">
+                      <i class="glyphicon glyphicon-calendar icon-calendar icon-large"></i>
+                      <span></span> <b class="caret"></b>
+                    </div>
                 </div>
-                <div class="col-sm-4">
-                    <a href="#" id="blob">Download Images</a>
+                <div class="col-sm-3">
+                    <button id="get_pictures" class="btn btn-default btn-primary disabled">Get Pictures</button>
+                    <!-- <a href="#" id="blob">Download Images</a> -->
                 </div>
-            </div>
-            <div class="row">
+            </div></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
                 <table id="pictures">
                     <tbody>
                     </tbody>
@@ -48,8 +56,10 @@
         }(document));
     </script>
     <script src="js/jquery-2.0.3.js"></script>
+    <script src="lib/moment.js"></script>
     <script src="js/main.js"></script>
     <script src="lib/chosen/chosen.jquery.js"></script>
+    <script src="lib/daterangepicker.js"></script>
     <script src="lib/jszip/jszip.js"></script>
 </body>
 </html>
