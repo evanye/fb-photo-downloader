@@ -46,7 +46,8 @@ function startUI() {
              'Yesterday': [moment().subtract('days', 1), moment().subtract('days', 1)],
              'Last 7 Days': [moment().subtract('days', 6), moment()],
              'Last 30 Days': [moment().subtract('days', 29), moment()],
-             'This Month': [moment().startOf('month'), moment().endOf('month')],
+             'Last 3 Months': [moment().subtract('months', 3), moment()],
+             'Last 6 Months': [moment().subtract('months', 6), moment()],
              'All Time': [moment(0), moment()]
           },
           startDate: moment().subtract('days', 29),
@@ -85,57 +86,77 @@ $('button#get_pictures').click(function(){
     var friendID = $('#friend_list').val();
     if(friendID) {
         getPhotos(friendID, start_date, end_date);
+        $('button#get_pictures').addClass('disabled');
+        $('button#get_pictures').text('Getting Pics');
     }
 });
 
 function getPhotos(userID, start, end) {
-    var num_photos = 0;
-    var num_downloaded_photos = 0;
-    var still_looking = true;
-    var max_photos = 100;
-    var unique_names = {};
-    var zip = new JSZip();
+    var download_queue = [];
 
-    FB.api('/' + userID + '/photos?since=' + start.unix() + '&until=' + end.unix(), function(response) {
-        traverse(response);
-        console.log(response);
+    FB.api('/' + userID + '/photos?since=' + start.unix() + 
+            '&until=' + end.add('days', 1).unix(), function(response) {
+        if(response.data.length) {
+            traverse(response);
+            console.log(response);
+        } else {
+            //no data :(
+        }
     });
 
     function traverse(obj) {
         if(obj.data.length) {
-            $.each(obj.data, function(index, data) {
-                if(num_photos >= max_photos || moment(data.created_time) < start){
-                    still_looking = false;
-                    return;
-                }
-                addPicture(data.picture);
-                downloadImage(data.images[0].source, data.created_time);
-                num_photos++;
-            });
+            var i = 0;
+            var cur_date = obj.data[0].created_time;
 
-            if(still_looking) {
+            while(i < obj.data.length && moment(cur_date) >= start){
+                var data = obj.data[i]; i++;
+                cur_date = data.created_time;
+
+                addPicture(data.picture);
+                download_queue.push({
+                    url: data.images[0].source,
+                    time: cur_date
+                });
+            }
+
+            if(moment(cur_date) >= start) {
                 $.get(obj.paging.next, function(data){
                     traverse(data);
                 });
+            } else {
+                console.log('start date over');
+                setUpDownload();
             }
+        } else {
+            console.log('no data');
         }
     }
 
     function addPicture(url) {
-        if(num_photos % 4 === 0) {
-            $('#pictures tbody:last')
-                .append($('<tr>'));
-        }
         var div = "<div class='photo' " + 
                   "style='background-image: url(" + url + ");'" +
                   "></div>";
-        $('#pictures tr:last')
-            .append($('<td>')
-                .append($(div)));
+        $('#pictures').append($(div));
     }
 
-    function downloadImage(url, time) {
-        var file_name = getDateString(time);
+    function setUpDownload(){
+        $('button#get_pictures').hide();
+        $('button#download').show();
+        $('button#download').click(function(){
+            if(download_queue.length)
+                downloadImages(download_queue);
+        });
+    }
+}
+
+function downloadImages(queue){
+    var num_downloaded_photos = 0;
+    var unique_names = {};
+    var zip = new JSZip();
+
+    $.each(queue, function(index, image){
+        var file_name = getDateString(image.time);
         if(file_name in unique_names){
             unique_names[file_name]++;
             file_name += '(' + unique_names[file_name] + ')';
@@ -143,16 +164,17 @@ function getPhotos(userID, start, end) {
             unique_names[file_name] = 0;
         }
 
-        getImageData(url, function(image_data) {
+        getImageData(image.url, function(image_data) {
             zip.file(file_name + '.jpg', image_data, {binary: true});
             num_downloaded_photos++;
-            if(num_downloaded_photos === max_photos)
+            if(num_downloaded_photos === queue.length)
                 createDownloadLink();
         });
-    }
+    });
 
     function createDownloadLink() {
         var blobLink = document.getElementById('blob');
+        $('#blob').show();
         console.log('finished downloading images!');
         try {
             blobLink.download = getSelectedName() + ".zip";
@@ -161,14 +183,6 @@ function getPhotos(userID, start, end) {
             blobLink.innerHTML += " (not supported on this browser)";
         }
     }
-}
-
-function getSelectedName(){
-    var name = $('#friend_list option:selected').text();
-    if(s.indexOf('(') !== -1) {
-        return name.slice(0, s.indexOf('(') - 1);
-    }
-    return name;
 }
 
 function getImageData(url, callback){
@@ -187,6 +201,14 @@ function getImageData(url, callback){
         }
     }
     xhr.send(null);
+}
+
+function getSelectedName(){
+    var name = $('#friend_list option:selected').text();
+    if(name.indexOf('(') !== -1) {
+        return name.slice(0, name.indexOf('(') - 1);
+    }
+    return name;
 }
 
 function getDateString(time_string) {
