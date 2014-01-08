@@ -17,7 +17,8 @@ window.fbAsyncInit = function() {
             console.log("connected");
             startUI();
         } else /* if (response.status === 'not_authorized') */ {
-            console.log("authorization failed");
+            console.log("disconnected");
+            resetUI();
         }
 
     });
@@ -36,8 +37,8 @@ var end_date = moment();
 
 function startUI() {
     getFriends();
-    $('div.login-box').hide();
-    $('.container').show();
+    hide('div.login-box');
+    show('.container');
 
     $('#reportrange').daterangepicker(
         {
@@ -57,14 +58,21 @@ function startUI() {
             start_date = (start.unix() < 0) ? moment(0) : start;
             end_date = end;
             $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
+            resetButtons();
         }
     );
     $('#reportrange span').html(moment().subtract('days', 29).format('MMMM D, YYYY') + ' - ' + moment().format('MMMM D, YYYY'));
 }
 
+function resetUI(){
+    resetButtons();
+    hide('.container');
+    show('.panel');
+}
+
 function getFriends() {
     console.log("getting friends");
-    var options = $('#friend_list').get(0).options;
+    var options = $('#friend-list').get(0).options;
     options.length = 0;
     options.add(new Option());
 
@@ -77,17 +85,21 @@ function getFriends() {
             options.add(new Option(friend.name, friend.id));
         });
         
-        $('#friend_list').chosen();
-        $('button#get_pictures').removeClass('disabled');
+        $('#friend-list').chosen().change(function(){
+            resetButtons();
+        });
+        enable('button#get-pictures');
     });
 }
 
-$('button#get_pictures').click(function(){
-    var friendID = $('#friend_list').val();
+$('button#get-pictures').click(function(){
+    var friendID = $('#friend-list').val();
     if(friendID) {
+        $('div.photo').remove();
         getPhotos(friendID, start_date, end_date);
-        $('button#get_pictures').addClass('disabled');
-        $('button#get_pictures').text('Getting Pics');
+        hide('#no-photos-warning');
+        disable('button#get-pictures');
+        $('button#get-pictures').text('Getting Pics');
     }
 });
 
@@ -99,8 +111,8 @@ function getPhotos(userID, start, end) {
         if(response.data.length) {
             traverse(response);
             console.log(response);
-        } else {
-            //no data :(
+        } else { //no data
+            show('#no-photos-warning');
         }
     });
 
@@ -141,11 +153,15 @@ function getPhotos(userID, start, end) {
     }
 
     function setUpDownload(){
-        $('button#get_pictures').hide();
-        $('button#download').show();
+        hide('button#get-pictures');
+        show('button#download');
         $('button#download').click(function(){
-            if(download_queue.length)
+            if(download_queue.length) {
                 downloadImages(download_queue);
+                disable('button#download');
+                $('button#download').text('Downloading');
+                show('.progress');
+            }
         });
     }
 }
@@ -167,21 +183,23 @@ function downloadImages(queue){
         getImageData(image.url, function(image_data) {
             zip.file(file_name + '.jpg', image_data, {binary: true});
             num_downloaded_photos++;
+            $('#progressbar').width(Math.floor(num_downloaded_photos * 100 / queue.length) + '%');
             if(num_downloaded_photos === queue.length)
-                createDownloadLink();
+                createDownloadLink(zip);
         });
     });
+}
 
-    function createDownloadLink() {
-        var blobLink = document.getElementById('blob');
-        $('#blob').show();
-        console.log('finished downloading images!');
-        try {
-            blobLink.download = getSelectedName() + ".zip";
-            blobLink.href = window.URL.createObjectURL(zip.generate({type:"blob"}));
-        } catch(e) {
-            blobLink.innerHTML += " (not supported on this browser)";
-        }
+function createDownloadLink(zip) {
+    var blobLink = document.getElementById('blob');
+    hide('button#download');
+    show(blobLink);
+    console.log('finished downloading images!');
+    try {
+        blobLink.download = getSelectedName() + ".zip";
+        blobLink.href = window.URL.createObjectURL(zip.generate({type:"blob"}));
+    } catch(e) {
+        blobLink.innerHTML += " (not supported on this browser)";
     }
 }
 
@@ -203,8 +221,23 @@ function getImageData(url, callback){
     xhr.send(null);
 }
 
+function resetButtons() {
+    $('button#get-pictures').text('Get Pictures');
+    enable('button#get-pictures');
+    show('button#get-pictures');
+
+    $('button#download').text('Download');
+    enable('button#download');
+    hide('button#download');
+
+    hide('a#blob');
+
+    $('#progressbar').width('0%');
+    hide('.progress');
+}
+
 function getSelectedName(){
-    var name = $('#friend_list option:selected').text();
+    var name = $('#friend-list option:selected').text();
     if(name.indexOf('(') !== -1) {
         return name.slice(0, name.indexOf('(') - 1);
     }
@@ -212,13 +245,21 @@ function getSelectedName(){
 }
 
 function getDateString(time_string) {
-    // var date = new Date(time_string);
-    // var day = date.getDate();
-    // var month = date.getMonth() + 1;
-    // var year = date.getFullYear();
-    // var hour = date.getHours();
-    // var minutes = date.getMinutes();
-    // var seconds = date.getSeconds();
-    // return [year, month, day].join('-') + " " + [hour, minutes, seconds].join('.');
     return moment(time_string).format('YYYY-MM-DD HH.mm.ss')
+}
+
+function show(elem) {
+    $(elem).removeClass('hidden');
+}
+
+function hide(elem) {
+    $(elem).addClass('hidden');
+}
+
+function enable(elem) {
+    $(elem).removeClass('disabled');
+}
+
+function disable(elem) {
+    $(elem).addClass('disabled');
 }

@@ -15,12 +15,12 @@
         <button id="login" class="btn btn-primary disabled">Log In</button>
     </div>
 
-    <div class="container">
+    <div class="container hidden">
         <h1>Facebook Photo Downloader</h1>
         <div class="row">
             <div class="panel"><div class="panel-body">
                 <div class="col-sm-3">
-                    <select id="friend_list" class="chosen-select" data-placeholder="Select a Friend">
+                    <select id="friend-list" class="chosen-select" data-placeholder="Select a Friend">
                         <option></option>
                     </select>
                 </div>
@@ -31,11 +31,21 @@
                     </div>
                 </div>
                 <div class="col-sm-3">
-                    <button id="get_pictures" class="btn btn-default btn-primary disabled">Get Pictures</button>
-                    <button id="download" class="btn btn-default btn-primary">Download</button>
-                    <a href="#" id="blob">Download Images</a>
+                    <button id="get-pictures" class="btn btn-primary disabled">Get Pictures</button>
+                    <button id="download" class="btn btn-primary hidden">Download</button>
+                    <a href="#" id="blob" class="btn btn-primary hidden">Save Images</a>
                 </div>
             </div></div>
+        </div>
+        <div class="row">
+            <div class="progress progress-striped active hidden">
+              <div id="progressbar" class="progress-bar"  role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100">
+                <!-- <span class="sr-only">0% Complete</span> -->
+              </div>
+            </div>
+            <div id="no-photos-warning" class="alert alert-warning hidden">
+                Uh-oh! Looks like this friend did not give us permission to view his/her photos :(
+            </div>
         </div>
         <div class="row">
             <div id="pictures" class="col-sm-12">
