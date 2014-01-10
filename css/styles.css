@@ -44,3 +44,9 @@ div.photo {
 #progressbar {
     width: 0%;
 }
+
+.center {
+    float: none;
+    margin-left: auto;
+    margin-right: auto
+}
