@@ -100,59 +100,81 @@ $('button#get-pictures').click(function(){
         hide('#no-photos-warning');
         disable('button#get-pictures');
         $('button#get-pictures').text('Getting Pics');
+        show('#facebookG');
     }
 });
 
 function getPhotos(userID, start, end) {
+    var thumbnail_queue = [];
     var download_queue = [];
+    var got_all_pictures = false;
 
     FB.api('/' + userID + '/photos?since=' + start.unix() + 
             '&until=' + end.add('days', 1).unix(), function(response) {
         if(response.data.length) {
             traverse(response);
-            console.log(response);
         } else { //no data
             show('#no-photos-warning');
         }
     });
 
     function traverse(obj) {
-        if(obj.data.length) {
-            var i = 0;
-            var cur_date = obj.data[0].created_time;
+        if(obj.data.length === 0) {
+            setUpDownload();
+            return;
+        }
 
-            while(i < obj.data.length && moment(cur_date) >= start){
-                var data = obj.data[i]; i++;
-                cur_date = data.created_time;
+        var i = 0;
+        var cur_date = obj.data[0].created_time;
 
-                addPicture(data.picture);
-                download_queue.push({
-                    url: data.images[0].source,
-                    time: cur_date
-                });
-            }
+        while(i < obj.data.length && moment(cur_date) >= start){
+            var data = obj.data[i]; i++;
+            cur_date = data.created_time;
 
-            if(moment(cur_date) >= start) {
-                $.get(obj.paging.next, function(data){
-                    traverse(data);
-                });
-            } else {
-                console.log('start date over');
-                setUpDownload();
-            }
+            thumbnail_queue.push(makeThumbnail(data.picture));
+            download_queue.push({
+                url: data.images[0].source,
+                time: cur_date
+            });
+        }
+        loadThumbnails();
+
+        if(moment(cur_date) >= start) {
+            $.get(obj.paging.next, function(data){
+                traverse(data);
+            });
         } else {
-            console.log('no data');
+            setUpDownload();
         }
     }
 
-    function addPicture(url) {
-        var div = "<div class='photo' " + 
-                  "style='background-image: url(" + url + ");'" +
-                  "></div>";
-        $('#pictures').append($(div));
+    $(window).scroll(function() {
+        loadThumbnails();
+    });
+
+    function makeThumbnail(url) {
+        return "<div class='photo' " + 
+               "style='background-image: url(" + url + ");'" +
+               "></div>";
+    }
+
+    function loadThumbnails() {
+        if(isScrolledIntoView('#facebookG')) {
+            var html_text = [];
+            var batch_size = getPhotoBatchSize();
+            while(thumbnail_queue.length > 0 && html_text.length < batch_size)
+                html_text.push(thumbnail_queue.shift());
+            $('#pictures').append($(html_text.join('')));
+
+            if(got_all_pictures && $('div.photo').size() === download_queue.length) {
+                hide('#facebookG');
+                $(window).off('scroll');
+            }
+        }
     }
 
     function setUpDownload(){
+        got_all_pictures = true;
         hide('button#get-pictures');
         show('button#download');
         $('button#download').click(function(){
@@ -183,7 +205,7 @@ function downloadImages(queue){
         getImageData(image.url, function(image_data) {
             zip.file(file_name + '.jpg', image_data, {binary: true});
             num_downloaded_photos++;
-            $('#progressbar').width(Math.floor(num_downloaded_photos * 100 / queue.length) + '%');
+            setProgressBar(Math.floor(num_downloaded_photos * 100 / queue.length));
             if(num_downloaded_photos === queue.length)
                 createDownloadLink(zip);
         });
@@ -232,7 +254,7 @@ function resetButtons() {
 
     hide('a#blob');
 
-    $('#progressbar').width('0%');
+    setProgressBar(0);
     hide('.progress');
 }
 
@@ -246,6 +268,25 @@ function getSelectedName(){
 
 function getDateString(time_string) {
     return moment(time_string).format('YYYY-MM-DD HH.mm.ss')
+}
+
+function isScrolledIntoView(elem) {
+    var docViewTop = $(window).scrollTop();
+    var docViewBottom = docViewTop + $(window).height();
+
+    var elemTop = $(elem).offset().top;
+    var elemBottom = elemTop + $(elem).height();
+
+    return ((elemBottom <= docViewBottom) && (elemTop >= docViewTop));
+}
+
+function getPhotoBatchSize() {
+    return Math.floor($('#pictures').width() / 122)
+           * Math.ceil($(window).height() / 122);
+}
+
+function setProgressBar(percentage) {
+    $('#progressbar').width(percentage + '%');    
 }
 
 function show(elem) {
