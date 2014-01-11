@@ -23,7 +23,7 @@ window.fbAsyncInit = function() {
 
     });
 
-    $('button#login').removeClass('disabled');
+    enable('button#login');
 };
 
 function logout() {
